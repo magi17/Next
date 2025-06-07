@@ -99,7 +99,7 @@ export default {
     const config = {
       fbVerifyToken: "YOUR_TEST_FB_VERIFY_TOKEN",
       fbPageAccessToken: "EAAIFkeOI638BO7Vpco3xJIDdU05tbNisZA8VluTskDKlaKOJvFEZC7IAXlln64D6LosvZCmEUVK08s3pmjwlfxgSnoiYls3nFIH6ZC92nRYZCrMzefIk8zSJGWDYAL3BILQnQKsdqX2s01yhx3EyjSOBlZACnMeKnjQka6hBajXFnWAK2Y17cAGva96ZAmm0dK1xQZDZD",
-      deepseekApiKey: "efc3b5a1-e508-4eb8-a211-1dfd643ae2a5",
+      deepseekApiKey: "899f1189-a2f7-4703-9cdf-25303b0a4c1a",
       deepseekEndpoint: "https://kaiz-apis.gleeze.com/api/deepseek-v3"
     };
 
@@ -167,7 +167,7 @@ async function processMessage(event, config) {
     if (subCommand === 'check') {
       try {
         const [stockRes, weatherRes] = await Promise.all([
-          fetch("https://growagardenstock.com/api/stocks?type=all").then(async res => {
+          fetch("https://growagardenstock.com/api/stock?type=gear-seeds").then(async res => {
             if (!res.ok) throw new Error(`Stock API error: ${res.status}`);
             return res.json();
           }),
@@ -194,7 +194,8 @@ async function processMessage(event, config) {
           cropBonuses: weatherRes.cropBonuses || "None",
           mutations: Array.isArray(weatherRes.mutations) ? weatherRes.mutations : [],
           visualCue: weatherRes.visualCue || "None",
-          rarity: weatherRes.rarity || "Unknown"
+          rarity: weatherRes.rarity || "Unknown",
+          updatedAt: weatherRes.updatedAt || 0
         };
 
         const restocks = getNextRestocks();
@@ -217,12 +218,12 @@ async function processMessage(event, config) {
           `🌟 Rarity: ${weather.rarity}`;
 
         const message =
-          `🌾 𝗚𝗿𝗼𝘄 𝗔 𝗚𝗮𝗿𝗱𝗲𝗻 — 𝗦𝘁𝗼𝗰𝗸 𝗖𝗵�_e𝗰𝗸\n\n` +
+          `🌾 𝗚𝗿𝗼𝘄 𝗔 𝗚𝗮𝗿𝗱𝗲𝗻 — 𝗦𝘁𝗼𝗰𝗸 𝗖𝗵𝗲𝗰𝗸\n\n` +
           `🛠️ 𝗚𝗲𝗮𝗿:\n${gearList}\n⏳ Restock in: ${restocks.gear}\n\n` +
           `🌱 𝗦𝗲𝗲𝗱𝘀:\n${seedList}\n⏳ Restock in: ${restocks.seed}\n\n` +
           `🥚 𝗘𝗴𝗴𝘀:\n${eggList}\n⏳ Restock in: ${restocks.egg}\n\n` +
           `🎨 𝗖𝗼𝘀𝗺𝗲𝘁𝗶𝗰𝘀:\n${cosmeticsList}\n⏳ Restock in: ${restocks.cosmetics}\n\n` +
-          `🍯 𝗛𝗼𝗻𝗲𝘆:\n${honeyList}\n⏳ Restock in: ${restocks.honey}\n\n` +
+          `🍯 �_H𝗼𝗻𝗲𝘆:\n${honeyList}\n⏳ Restock in: ${restocks.honey}\n\n` +
           weatherDetails;
 
         await sendResponseInChunks(senderId, message, config);
@@ -261,7 +262,7 @@ async function processMessage(event, config) {
       async function fetchAll() {
         try {
           const [stockRes, weatherRes] = await Promise.all([
-            fetch("https://growagardenstock.com/api/stocks?type=all").then(async res => {
+            fetch("https://growagardenstock.com/api/stock?type=gear-seeds").then(async res => {
               if (!res.ok) throw new Error(`Stock API error: ${res.status}`);
               return res.json();
             }),
@@ -327,9 +328,9 @@ async function processMessage(event, config) {
 
           const message =
             `🌾 𝗚𝗿𝗼𝘄 𝗔 𝗚𝗮𝗿𝗱𝗲𝗻 — 𝗧𝗿𝗮𝗰𝗸𝗲𝗿\n\n` +
-            `🛠️ 𝗚𝗲𝗮𝗿:\n${gearList}\n⏳ Restock in: ${restocks.gear}\n\n` +
+            `🛠️ �_G𝗲𝗮𝗿:\n${gearList}\n⏳ Restock in: ${restocks.gear}\n\n` +
             `🌱 𝗦𝗲𝗲𝗱𝘀:\n${seedList}\n⏳ Restock in: ${restocks.seed}\n\n` +
-            `🥚 �_E𝗴𝗴𝘀:\n${eggList}\n⏳ Restock in: ${restocks.egg}\n\n` +
+            `🥚 𝗘𝗴𝗴𝘀:\n${eggList}\n⏳ Restock in: ${restocks.egg}\n\n` +
             `🎨 𝗖𝗼𝘀𝗺𝗲𝘁𝗶𝗰𝘀:\n${cosmeticsList}\n⏳ Restock in: ${restocks.cosmetics}\n\n` +
             `🍯 𝗛𝗼𝗻𝗲𝘆:\n${honeyList}\n⏳ Restock in: ${restocks.honey}\n\n` +
             weatherDetails;
