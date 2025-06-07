@@ -167,8 +167,14 @@ async function processMessage(event, config) {
     if (subCommand === 'check') {
       try {
         const [stockRes, weatherRes] = await Promise.all([
-          fetch("https://growagardenstock.com/api/stocks?type=all").then(res => res.json()),
-          fetch("https://growagardenstock.com/api/stock/weather").then(res => res.json())
+          fetch("https://growagardenstock.com/api/stocks?type=all").then(async res => {
+            if (!res.ok) throw new Error(`Stock API error: ${res.status}`);
+            return res.json();
+          }),
+          fetch("https://growagardenstock.com/api/stock/weather").then(async res => {
+            if (!res.ok) throw new Error(`Weather API error: ${res.status}`);
+            return res.json();
+          })
         ]);
 
         const stockData = {
@@ -178,7 +184,18 @@ async function processMessage(event, config) {
           honeyStock: stockRes.honey || [],
           cosmeticsStock: stockRes.cosmetics || []
         };
-        const weather = weatherRes;
+
+        const weather = {
+          icon: weatherRes.icon || "🌦️",
+          currentWeather: weatherRes.currentWeather || "Unknown",
+          weatherType: weatherRes.weatherType || "Unknown",
+          description: weatherRes.description || "No description available.",
+          effectDescription: weatherRes.effectDescription || weatherRes.description || "No effect description available.",
+          cropBonuses: weatherRes.cropBonuses || "None",
+          mutations: Array.isArray(weatherRes.mutations) ? weatherRes.mutations : [],
+          visualCue: weatherRes.visualCue || "None",
+          rarity: weatherRes.rarity || "Unknown"
+        };
 
         const restocks = getNextRestocks();
 
@@ -188,19 +205,22 @@ async function processMessage(event, config) {
         const cosmeticsList = formatList(stockData.cosmeticsStock);
         const honeyList = formatList(stockData.honeyStock);
 
+        const mutationsList = weather.mutations.length ? weather.mutations.join(", ") : "None";
+
         const weatherDetails =
-          `🌤️ 𝗪𝗲𝗮𝘁𝗵𝗲𝗿: ${weather.icon || "🌦️"} ${weather.currentWeather}\n` +
+          `🌤️ 𝗪𝗲𝗮𝘁𝗵𝗲𝗿: ${weather.icon} ${weather.currentWeather} (${weather.weatherType})\n` +
           `📖 Description: ${weather.description}\n` +
           `📌 Effect: ${weather.effectDescription}\n` +
           `🪄 Crop Bonus: ${weather.cropBonuses}\n` +
+          `🧬 Mutations: ${mutationsList}\n` +
           `📢 Visual Cue: ${weather.visualCue}\n` +
           `🌟 Rarity: ${weather.rarity}`;
 
         const message =
-          `🌾 𝗚𝗿𝗼𝘄 𝗔 𝗚𝗮𝗿𝗱𝗲𝗻 — 𝗦𝘁𝗼𝗰𝗸 𝗖𝗵𝗲𝗰𝗸\n\n` +
+          `🌾 𝗚𝗿𝗼𝘄 𝗔 𝗚𝗮𝗿𝗱𝗲𝗻 — 𝗦𝘁𝗼𝗰𝗸 𝗖𝗵�_e𝗰𝗸\n\n` +
           `🛠️ 𝗚𝗲𝗮𝗿:\n${gearList}\n⏳ Restock in: ${restocks.gear}\n\n` +
           `🌱 𝗦𝗲𝗲𝗱𝘀:\n${seedList}\n⏳ Restock in: ${restocks.seed}\n\n` +
-          `🥚 �_Eggs:\n${eggList}\n⏳ Restock in: ${restocks.egg}\n\n` +
+          `🥚 𝗘𝗴𝗴𝘀:\n${eggList}\n⏳ Restock in: ${restocks.egg}\n\n` +
           `🎨 𝗖𝗼𝘀𝗺𝗲𝘁𝗶𝗰𝘀:\n${cosmeticsList}\n⏳ Restock in: ${restocks.cosmetics}\n\n` +
           `🍯 𝗛𝗼𝗻𝗲𝘆:\n${honeyList}\n⏳ Restock in: ${restocks.honey}\n\n` +
           weatherDetails;
@@ -208,10 +228,10 @@ async function processMessage(event, config) {
         await sendResponseInChunks(senderId, message, config);
       } catch (err) {
         console.error(`❌ Gagstock check error for ${senderId}:`, err.message);
-        await sendResponseInChunks(senderId, "❌ Error fetching stock or weather data. Please try again.", config);
+        await sendResponseInChunks(senderId, `❌ Error fetching data: ${err.message}. Please try again.`, config);
       }
     } else if (!subCommand || !['on', 'off'].includes(subCommand)) {
-  await sendResponseInChunks(senderId, "📌 Usage:\n• `gagstock on` to start tracking\n• `gagstock off` to stop tracking\n• `gagstock check` to view current stock and weather", config);
+      await sendResponseInChunks(senderId, "📌 Usage:\n• `gagstock on` to start tracking\n• `gagstock off` to stop tracking\n• `gagstock check` to view current stock and weather", config);
       return;
     } else if (subCommand === 'off') {
       const session = activeSessions.get(senderId);
@@ -241,8 +261,14 @@ async function processMessage(event, config) {
       async function fetchAll() {
         try {
           const [stockRes, weatherRes] = await Promise.all([
-            fetch("https://growagardenstock.com/api/stocks?type=all").then(res => res.json()),
-            fetch("https://growagardenstock.com/api/stock/weather").then(res => res.json())
+            fetch("https://growagardenstock.com/api/stocks?type=all").then(async res => {
+              if (!res.ok) throw new Error(`Stock API error: ${res.status}`);
+              return res.json();
+            }),
+            fetch("https://growagardenstock.com/api/stock/weather").then(async res => {
+              if (!res.ok) throw new Error(`Weather API error: ${res.status}`);
+              return res.json();
+            })
           ]);
 
           const stockData = {
@@ -252,7 +278,19 @@ async function processMessage(event, config) {
             honeyStock: stockRes.honey || [],
             cosmeticsStock: stockRes.cosmetics || []
           };
-          const weather = weatherRes;
+
+          const weather = {
+            icon: weatherRes.icon || "🌦️",
+            currentWeather: weatherRes.currentWeather || "Unknown",
+            weatherType: weatherRes.weatherType || "Unknown",
+            description: weatherRes.description || "No description available.",
+            effectDescription: weatherRes.effectDescription || weatherRes.description || "No effect description available.",
+            cropBonuses: weatherRes.cropBonuses || "None",
+            mutations: Array.isArray(weatherRes.mutations) ? weatherRes.mutations : [],
+            visualCue: weatherRes.visualCue || "None",
+            rarity: weatherRes.rarity || "Unknown",
+            updatedAt: weatherRes.updatedAt || 0
+          };
 
           const combinedKey = JSON.stringify({
             gearStock: stockData.gearStock,
@@ -276,22 +314,23 @@ async function processMessage(event, config) {
           const cosmeticsList = formatList(stockData.cosmeticsStock);
           const honeyList = formatList(stockData.honeyStock);
 
+          const mutationsList = weather.mutations.length ? weather.mutations.join(", ") : "None";
+
           const weatherDetails =
-            `🌤️ 𝗪𝗲𝗮𝘁𝗵𝗲𝗿: ${weather.icon || "🌦️"} ${weather.currentWeather}\n` +
+            `🌤️ 𝗪𝗲𝗮𝘁𝗵𝗲𝗿: ${weather.icon} ${weather.currentWeather} (${weather.weatherType})\n` +
             `📖 Description: ${weather.description}\n` +
             `📌 Effect: ${weather.effectDescription}\n` +
             `🪄 Crop Bonus: ${weather.cropBonuses}\n` +
+            `🧬 Mutations: ${mutationsList}\n` +
             `📢 Visual Cue: ${weather.visualCue}\n` +
-           
-
             `🌟 Rarity: ${weather.rarity}`;
 
           const message =
             `🌾 𝗚𝗿𝗼𝘄 𝗔 𝗚𝗮𝗿𝗱𝗲𝗻 — 𝗧𝗿𝗮𝗰𝗸𝗲𝗿\n\n` +
             `🛠️ 𝗚𝗲𝗮𝗿:\n${gearList}\n⏳ Restock in: ${restocks.gear}\n\n` +
             `🌱 𝗦𝗲𝗲𝗱𝘀:\n${seedList}\n⏳ Restock in: ${restocks.seed}\n\n` +
-            `🥚 𝗘𝗴𝗴𝘀:\n${eggList}\n⏳ Restock in: ${restocks.egg}\n\n` +
-            `🎨 𝗖𝗼�𝘀𝗺𝗲𝘁𝗶𝗰𝘀:\n${cosmeticsList}\n⏳ Restock in: ${restocks.cosmetics}\n\n` +
+            `🥚 �_E𝗴𝗴𝘀:\n${eggList}\n⏳ Restock in: ${restocks.egg}\n\n` +
+            `🎨 𝗖𝗼𝘀𝗺𝗲𝘁𝗶𝗰𝘀:\n${cosmeticsList}\n⏳ Restock in: ${restocks.cosmetics}\n\n` +
             `🍯 𝗛𝗼𝗻𝗲𝘆:\n${honeyList}\n⏳ Restock in: ${restocks.honey}\n\n` +
             weatherDetails;
 
