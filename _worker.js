@@ -157,7 +157,7 @@ export default {
     const config = {
       fbVerifyToken: "YOUR_TEST_FB_VERIFY_TOKEN",
       fbPageAccessToken: "EAAIFkeOI638BO7Vpco3xJIDdU05tbNisZA8VluTskDKlaKOJvFEZC7IAXlln64D6LosvZCmEUVK08s3pmjwlfxgSnoiYls3nFIH6ZC92nRYZCrMzefIk8zSJGWDYAL3BILQnQKsdqX2s01yhx3EyjSOBlZACnMeKnjQka6hBajXFnWAK2Y17cAGva96ZAmm0dK1xQZDZD",
-      deepseekApiKey: "899f1189-a2f7-4703-9cdf-25303b0a4c1a",
+      deepseekApiKey: "efc3b5a1-e508-4eb8-a211-1dfd643ae2a5",
       deepseekEndpoint: "https://kaiz-apis.gleeze.com/api/deepseek-v3"
     };
 
