@@ -51,6 +51,20 @@ function formatValue(val) {
   return `x${val}`;
 }
 
+function parseStockItem(item) {
+  const match = item.match(/^(.+?)\s*\*\*x(\d+)\*\*$/);
+  if (!match) return { name: item, value: 0 };
+  return { name: match[1].trim(), value: parseInt(match[2], 10) };
+}
+
+function formatList(arr) {
+  if (!arr?.length) return "None.";
+  return arr.map(item => {
+    const parsed = typeof item === 'string' ? parseStockItem(item) : item;
+    return `- ${parsed.emoji ? parsed.emoji + " " : ""}${parsed.name}: ${formatValue(parsed.value)}`;
+  }).join("\n");
+}
+
 function splitMessageIntoChunks(message, chunkSize) {
   const chunks = [];
   let chunk = '';
@@ -94,7 +108,7 @@ export default {
       const mode = url.searchParams.get('hub.mode');
       const token = url.searchParams.get('hub.verify_token');
       const challenge = url.searchParams.get('hub.challenge');
-      if (mode === ' девушки' && token === config.fbVerifyToken) {
+      if (mode === 'subscribe' && token === config.fbVerifyToken) {
         return new Response(challenge, { status: 200 });
       }
       return new Response('Verification failed', { status: 403 });
@@ -130,6 +144,7 @@ export default {
         '- POST /webhook - Message handling\n\n' +
         'Commands:\n' +
         '- gagstock: Track Grow A Garden stock\n' +
+        '- gagstock check: Check current stock and weather\n' +
         '- commands: Show available commands',
         { status: 200 }
       );
@@ -146,69 +161,26 @@ async function processMessage(event, config) {
 
   const args = messageText.split(/\s+/);
   const command = args[0];
+  const subCommand = args[1]?.toLowerCase();
 
   if (command === 'gagstock') {
-    if (!args[1] || !['on', 'off'].includes(args[1].toLowerCase())) {
-      await sendResponseInChunks(senderId, "📌 Usage:\n• `gagstock on` to start tracking\n• `gagstock off` to stop tracking", config);
-      return;
-    }
-    const action = args[1].toLowerCase();
-
-    if (action === 'off') {
-      const session = activeSessions.get(senderId);
-      if (session) {
-        clearInterval(session.interval);
-        activeSessions.delete(senderId);
-        await sendResponseInChunks(senderId, "🛑 Gagstock tracking stopped.", config);
-      } else {
-        await sendResponseInChunks(senderId, "⚠️ You don't have an active gagstock session.", config);
-      }
-      return;
-    }
-
-    if (activeSessions.has(senderId)) {
-      await sendResponseInChunks(senderId, "📡 You're already tracking Gagstock. Use `gagstock off` to stop.", config);
-      return;
-    }
-
-    await sendResponseInChunks(senderId, "✅ Gagstock tracking started! You'll be notified when stock or weather changes.", config);
-
-    const sessionData = {
-      interval: null,
-      lastCombinedKey: null,
-      lastMessage: "",
-      errorCount: 0
-    };
-
-    async function fetchAll() {
+    if (subCommand === 'check') {
       try {
         const [stockRes, weatherRes] = await Promise.all([
           fetch("https://growagardenstock.com/api/stocks?type=all").then(res => res.json()),
           fetch("https://growagardenstock.com/api/stock/weather").then(res => res.json())
         ]);
 
-        const stockData = stockRes;
+        const stockData = {
+          gearStock: stockRes.gear || [],
+          seedsStock: stockRes.seeds || [],
+          eggStock: stockRes.egg || [],
+          honeyStock: stockRes.honey || [],
+          cosmeticsStock: stockRes.cosmetics || []
+        };
         const weather = weatherRes;
 
-        const combinedKey = JSON.stringify({
-          gearStock: stockData.gearStock,
-          seedsStock: stockData.seedsStock,
-          eggStock: stockData.eggStock,
-          honeyStock: stockData.honeyStock,
-          cosmeticsStock: stockData.cosmeticsStock,
-          weatherUpdatedAt: weather.updatedAt,
-          weatherCurrent: weather.currentWeather
-        });
-
-        if (combinedKey === sessionData.lastCombinedKey) return;
-        sessionData.lastCombinedKey = combinedKey;
-        sessionData.errorCount = 0;
-
         const restocks = getNextRestocks();
-
-        const formatList = arr => arr?.length
-          ? arr.map(i => `- ${i.emoji ? i.emoji + " " : ""}${i.name}: ${formatValue(i.value)}`).join("\n")
-          : "None.";
 
         const gearList = formatList(stockData.gearStock);
         const seedList = formatList(stockData.seedsStock);
@@ -225,37 +197,130 @@ async function processMessage(event, config) {
           `🌟 Rarity: ${weather.rarity}`;
 
         const message =
-          `🌾 𝗚𝗿𝗼𝘄 𝗔 𝗚𝗮𝗿𝗱𝗲𝗻 — 𝗧𝗿𝗮𝗰𝗸𝗲𝗿\n\n` +
+          `🌾 𝗚𝗿𝗼𝘄 𝗔 𝗚𝗮𝗿𝗱𝗲𝗻 — 𝗦𝘁𝗼𝗰𝗸 𝗖𝗵𝗲𝗰𝗸\n\n` +
           `🛠️ 𝗚𝗲𝗮𝗿:\n${gearList}\n⏳ Restock in: ${restocks.gear}\n\n` +
           `🌱 𝗦𝗲𝗲𝗱𝘀:\n${seedList}\n⏳ Restock in: ${restocks.seed}\n\n` +
-          `🥚 𝗘𝗴𝗴𝘀:\n${eggList}\n⏳ Restock in: ${restocks.egg}\n\n` +
+          `🥚 �_Eggs:\n${eggList}\n⏳ Restock in: ${restocks.egg}\n\n` +
           `🎨 𝗖𝗼𝘀𝗺𝗲𝘁𝗶𝗰𝘀:\n${cosmeticsList}\n⏳ Restock in: ${restocks.cosmetics}\n\n` +
-          `🍯 �_Honey:\n${honeyList}\n⏳ Restock in: ${restocks.honey}\n\n` +
+          `🍯 𝗛𝗼𝗻𝗲𝘆:\n${honeyList}\n⏳ Restock in: ${restocks.honey}\n\n` +
           weatherDetails;
 
-        if (message !== sessionData.lastMessage) {
-          sessionData.lastMessage = message;
-          await sendResponseInChunks(senderId, message, config);
-        }
+        await sendResponseInChunks(senderId, message, config);
       } catch (err) {
-        sessionData.errorCount++;
-        console.error(`❌ Gagstock error for ${senderId}:`, err.message);
-        if (sessionData.errorCount >= 3) {
-          clearInterval(sessionData.interval);
-          activeSessions.delete(senderId);
-          await sendResponseInChunks(senderId, "❌ Tracking stopped due to repeated errors.", config);
+        console.error(`❌ Gagstock check error for ${senderId}:`, err.message);
+        await sendResponseInChunks(senderId, "❌ Error fetching stock or weather data. Please try again.", config);
+      }
+    } else if (!subCommand || !['on', 'off'].includes(subCommand)) {
+  await sendResponseInChunks(senderId, "📌 Usage:\n• `gagstock on` to start tracking\n• `gagstock off` to stop tracking\n• `gagstock check` to view current stock and weather", config);
+      return;
+    } else if (subCommand === 'off') {
+      const session = activeSessions.get(senderId);
+      if (session) {
+        clearInterval(session.interval);
+        activeSessions.delete(senderId);
+        await sendResponseInChunks(senderId, "🛑 Gagstock tracking stopped.", config);
+      } else {
+        await sendResponseInChunks(senderId, "⚠️ You don't have an active gagstock session.", config);
+      }
+      return;
+    } else if (subCommand === 'on') {
+      if (activeSessions.has(senderId)) {
+        await sendResponseInChunks(senderId, "📡 You're already tracking Gagstock. Use `gagstock off` to stop.", config);
+        return;
+      }
+
+      await sendResponseInChunks(senderId, "✅ Gagstock tracking started! You'll be notified when stock or weather changes.", config);
+
+      const sessionData = {
+        interval: null,
+        lastCombinedKey: null,
+        lastMessage: "",
+        errorCount: 0
+      };
+
+      async function fetchAll() {
+        try {
+          const [stockRes, weatherRes] = await Promise.all([
+            fetch("https://growagardenstock.com/api/stocks?type=all").then(res => res.json()),
+            fetch("https://growagardenstock.com/api/stock/weather").then(res => res.json())
+          ]);
+
+          const stockData = {
+            gearStock: stockRes.gear || [],
+            seedsStock: stockRes.seeds || [],
+            eggStock: stockRes.egg || [],
+            honeyStock: stockRes.honey || [],
+            cosmeticsStock: stockRes.cosmetics || []
+          };
+          const weather = weatherRes;
+
+          const combinedKey = JSON.stringify({
+            gearStock: stockData.gearStock,
+            seedsStock: stockData.seedsStock,
+            eggStock: stockData.eggStock,
+            honeyStock: stockData.honeyStock,
+            cosmeticsStock: stockData.cosmeticsStock,
+            weatherUpdatedAt: weather.updatedAt,
+            weatherCurrent: weather.currentWeather
+          });
+
+          if (combinedKey === sessionData.lastCombinedKey) return;
+          sessionData.lastCombinedKey = combinedKey;
+          sessionData.errorCount = 0;
+
+          const restocks = getNextRestocks();
+
+          const gearList = formatList(stockData.gearStock);
+          const seedList = formatList(stockData.seedsStock);
+          const eggList = formatList(stockData.eggStock);
+          const cosmeticsList = formatList(stockData.cosmeticsStock);
+          const honeyList = formatList(stockData.honeyStock);
+
+          const weatherDetails =
+            `🌤️ 𝗪𝗲𝗮𝘁𝗵𝗲𝗿: ${weather.icon || "🌦️"} ${weather.currentWeather}\n` +
+            `📖 Description: ${weather.description}\n` +
+            `📌 Effect: ${weather.effectDescription}\n` +
+            `🪄 Crop Bonus: ${weather.cropBonuses}\n` +
+            `📢 Visual Cue: ${weather.visualCue}\n` +
+           
+
+            `🌟 Rarity: ${weather.rarity}`;
+
+          const message =
+            `🌾 𝗚𝗿𝗼𝘄 𝗔 𝗚𝗮𝗿𝗱𝗲𝗻 — 𝗧𝗿𝗮𝗰𝗸𝗲𝗿\n\n` +
+            `🛠️ 𝗚𝗲𝗮𝗿:\n${gearList}\n⏳ Restock in: ${restocks.gear}\n\n` +
+            `🌱 𝗦𝗲𝗲𝗱𝘀:\n${seedList}\n⏳ Restock in: ${restocks.seed}\n\n` +
+            `🥚 𝗘𝗴𝗴𝘀:\n${eggList}\n⏳ Restock in: ${restocks.egg}\n\n` +
+            `🎨 𝗖𝗼�𝘀𝗺𝗲𝘁𝗶𝗰𝘀:\n${cosmeticsList}\n⏳ Restock in: ${restocks.cosmetics}\n\n` +
+            `🍯 𝗛𝗼𝗻𝗲𝘆:\n${honeyList}\n⏳ Restock in: ${restocks.honey}\n\n` +
+            weatherDetails;
+
+          if (message !== sessionData.lastMessage) {
+            sessionData.lastMessage = message;
+            await sendResponseInChunks(senderId, message, config);
+          }
+        } catch (err) {
+          sessionData.errorCount++;
+          console.error(`❌ Gagstock error for ${senderId}:`, err.message);
+          if (sessionData.errorCount >= 3) {
+            clearInterval(sessionData.interval);
+            activeSessions.delete(senderId);
+            await sendResponseInChunks(senderId, "❌ Tracking stopped due to repeated errors.", config);
+          }
         }
       }
-    }
 
-    sessionData.interval = setInterval(fetchAll, 30 * 1000);
-    activeSessions.set(senderId, sessionData);
-    await fetchAll();
+      sessionData.interval = setInterval(fetchAll, 30 * 1000);
+      activeSessions.set(senderId, sessionData);
+      await fetchAll();
+    }
   } else if (command === 'commands' || command === 'help') {
     const commandsList =
       `📋 𝗔𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀:\n\n` +
       `- gagstock: Track Grow A Garden stock and weather\n` +
       `  Usage: gagstock on | gagstock off\n` +
+      `- gagstock check: Check current stock and weather\n` +
+      `  Usage: gagstock check\n` +
       `- commands: Show this list\n` +
       `  Usage: commands\n\n` +
       `For other queries, I'll respond with AI-powered answers!`;
