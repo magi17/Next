@@ -10,33 +10,33 @@ const EMOJI_MAP = {
   Watermelon: "🍉",
   Tomato: "🍅",
   Blueberry: "🫐",
-  Orange Tulip: "🌷",
+  "Orange Tulip": "🌷", // Fixed: Quoted key
   // Gear
   Trowel: "🛠️",
-  Harvest Tool: "🪓",
-  Watering Can: "🚿",
-  Recall Wrench: "🔧",
-  Favorite Tool: "🔨",
-  Basic Sprinkler: "💧",
+  "Harvest Tool": "🪓", // Fixed: Quoted key
+  "Watering Can": "🚿", // Fixed: Quoted key
+  "Recall Wrench": "🔧", // Fixed: Quoted key
+  "Favorite Tool": "🔨", // Fixed: Quoted key
+  "Basic Sprinkler": "💧", // Fixed: Quoted key
   // Eggs
-  Common Egg: "🥚",
-  Uncommon Egg: "🥚",
+  "Common Egg": "🥚", // Fixed: Quoted key
+  "Uncommon Egg": "🥚", // Fixed: Quoted key
   Location: "📍",
   // Cosmetics
-  Common Gnome Crate: "🧙",
+  "Common Gnome Crate": "🧙", // Fixed: Quoted key
   Rake: "🧹",
-  Sign Crate: "🪧",
-  Mini TV: "📺",
-  Medium Stone Table: "🪨",
-  Orange Umbrella: "☂️",
-  Red Well: "🕳️",
-  Wood Fence: "🪵",
-  Axe Stump: "🌳",
+  "Sign Crate": "🪧", // Fixed: Quoted key
+  "Mini TV": "📺", // Fixed: Quoted key
+  "Medium Stone Table": "🪨", // Fixed: Quoted key
+  "Orange Umbrella": "☂️", // Fixed: Quoted key
+  "Red Well": "🕳️", // Fixed: Quoted key
+  "Wood Fence": "🪵", // Fixed: Quoted key
+  "Axe Stump": "🌳", // Fixed: Quoted key
   // Honeyevent
-  Flower Seed Pack: "🌸",
-  Honey Torch: "🔥",
-  Bee Crate: "🐝",
-  Honey Comb: "🍯",
+  "Flower Seed Pack": "🌸", // Fixed: Quoted key
+  "Honey Torch": "🔥", // Fixed: Quoted key
+  "Bee Crate": "🐝", // Fixed: Quoted key
+  "Honey Comb": "🍯", // Fixed: Quoted key
   // Event
   ItemFrame: "🖼️"
 };
@@ -45,6 +45,7 @@ function pad(n) {
   return n < 10 ? "0" + n : n;
 }
 
+// [Rest of the code remains unchanged...]
 function getPHTime() {
   const now = new Date();
   return new Date(now.getTime() + now.getTimezoneOffset() * 60000 + PH_OFFSET);
