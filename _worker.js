@@ -4,7 +4,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
-    
+
     // Handle webhook verification (GET request to /webhooks)
     if (request.method === 'GET' && pathname === '/webhooks') {
       return handleWebhookVerification(request, env);
@@ -49,7 +49,7 @@ async function handleWebhookVerification(request, env) {
       return new Response('Verification failed', { status: 403 });
     }
   }
-  
+
   return new Response('Missing verification parameters', { status: 400 });
 }
 
@@ -58,7 +58,7 @@ async function handleWebhookEvent(request, env, ctx) {
   try {
     const body = await request.json();
     console.log('Received webhook event:', JSON.stringify(body));
-    
+
     if (body.object === 'page') {
       // Process each entry
       for (const entry of body.entry) {
@@ -75,7 +75,7 @@ async function handleWebhookEvent(request, env, ctx) {
       }
       return new Response('EVENT_RECEIVED', { status: 200 });
     }
-    
+
     return new Response('Invalid object', { status: 404 });
   } catch (error) {
     console.error('Error processing webhook:', error);
@@ -102,7 +102,7 @@ async function handleMessage(senderId, message, env) {
 // Handle SMS command
 async function handleSMSCommand(senderId, message, env) {
   const parts = message.split(' ');
-  
+
   if (parts.length < 4) {
     await sendMessage(senderId, 
       '❌ Invalid SMS command format.\n\n' +
@@ -131,7 +131,7 @@ async function handleSMSCommand(senderId, message, env) {
 
     // Build SMS API URL with parameters
     const smsUrl = `${SMS_API_URL}?phone=${encodeURIComponent(phone)}&sender=${encodeURIComponent(sender)}&text=${encodeURIComponent(text)}`;
-    
+
     console.log('Calling SMS API:', smsUrl);
     const response = await fetch(smsUrl);
     const data = await response.json();
@@ -162,13 +162,13 @@ async function sendHelpMessage(senderId, env) {
     '• `help` - Show this help message\n' +
     '• `sms [phone] [sender] [message]` - Send SMS\n\n' +
     '📝 **SMS Format:**\n' +
-    '`sms 09555295917 mark Hello World`\n\n' +
+    '`sms 09123456789 mark Hello World`\n\n' +
     '📋 **Parameters:**\n' +
     '• `phone` - 11-digit number (09XXXXXXXXX)\n' +
     '• `sender` - Sender name\n' +
     '• `message` - Your text message\n\n' +
     '💡 **Example:**\n' +
-    '`sms 09555295917 john Hello there!`';
+    '`sms 09123456789 john Hello there!`';
 
   await sendMessage(senderId, helpMessage, env);
 }
@@ -187,7 +187,7 @@ async function sendDefaultMessage(senderId, env) {
 async function sendMessage(senderId, message, env) {
   try {
     const PAGE_ACCESS_TOKEN = 'EAAIFkeOI638BPzQinjUtCrNG08ZBuLjQLkAZAvE5mdti2tAsxYRmTbKhLyg0hFZC6nx3zlsRnzLNe5gg4GqPJx37oIB0WseYZAlSBjnmccTKMaM054QTGPtZBMRBDpd0LxIZCOVzZCMx6Ys0Uxq5Ieadbr5vLQRG1GbCOmGVGZA1efoNZB8sUanbanBjhWNkxn5OejstT6QZDZD';
-    
+
     const payload = {
       recipient: { id: senderId },
       message: { text: message }
@@ -205,13 +205,13 @@ async function sendMessage(senderId, message, env) {
         body: JSON.stringify(payload)
       }
     );
-    
+
     if (!response.ok) {
       const errorData = await response.text();
       console.error('Facebook API error:', errorData);
       throw new Error(`Facebook API responded with status: ${response.status}`);
     }
-    
+
     const result = await response.json();
     console.log('Facebook API response:', result);
     return result;
