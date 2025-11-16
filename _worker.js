@@ -21,7 +21,7 @@ module.exports = {
 
       if (!text) {
         return api.sendMessage(
-          "❌ Please provide a message.\nExample:\n.sms 09123456789 mark Hello",
+          "❌ Please provide a message.\nExample:\n.sms 09555295917 mark Hello",
           event.threadID,
           event.messageID
         );
