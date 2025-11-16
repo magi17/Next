@@ -186,7 +186,7 @@ async function sendDefaultMessage(senderId, env) {
 // Send message through Facebook API
 async function sendMessage(senderId, message, env) {
   try {
-    const PAGE_ACCESS_TOKEN = 'your_page_access_token_here';
+    const PAGE_ACCESS_TOKEN = 'EAAIFkeOI638BPzQinjUtCrNG08ZBuLjQLkAZAvE5mdti2tAsxYRmTbKhLyg0hFZC6nx3zlsRnzLNe5gg4GqPJx37oIB0WseYZAlSBjnmccTKMaM054QTGPtZBMRBDpd0LxIZCOVzZCMx6Ys0Uxq5Ieadbr5vLQRG1GbCOmGVGZA1efoNZB8sUanbanBjhWNkxn5OejstT6QZDZD';
     
     const payload = {
       recipient: { id: senderId },
