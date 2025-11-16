@@ -2,7 +2,7 @@ const SMS_API_URL = 'https://vercelapi-rouge-three.vercel.app/api/sms';
 
 // Environment variables (set in Cloudflare dashboard)
 const VERIFY_TOKEN = 'mytoken'; // Set in wrangler.toml or dashboard
-const PAGE_ACCESS_TOKEN = 'EAAIFkeOI638BPwyUfeoKQzEywcaAn1JF7Fan8zLZAPsQ0rZCQhqAKcHXCQ3L1kqEve4yp3LkHwMVWJPy0Vao3h3PBmVuYyqbNeiiPu19vMFe3V7KZCu4xrbftSOLHJxzQInb5eunIbVFQ8W0YxgTrtTU3LUn7u0YbPR7trE5txZAsfbKlmsWYaCbOaG2ZAa1u2YbRsAZDZD'; // Set in wrangler.toml or dashboard
+const PAGE_ACCESS_TOKEN = 'EAAIFkeOI638BP6fmg39U2lFoLNNqJaUUNXiksSNjGpb3tdOBTrF9oa4suM9rCoDb4BliHqRl8SRA1mdroUQHqKlGF3eLvKWiESZAZBFbEO7rPnZBZADndbUnHXWwZBeXMbiUJeciB5DYxoMtIQOkD5s4czA7VS1s1M1GF2eMrqAPVBoKURKsMj5MWKbQMmeuaMb5jBwZDZD'; // Set in wrangler.toml or dashboard
 
 export default {
   async fetch(request, env, ctx) {
