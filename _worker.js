@@ -1,44 +1,63 @@
 const SMS_API_URL = 'https://vercelapi-rouge-three.vercel.app/api/sms';
 
-// Environment variables (set in Cloudflare dashboard)
-const VERIFY_TOKEN = 'mytoken'; // Set in wrangler.toml or dashboard
-const PAGE_ACCESS_TOKEN = 'EAAIFkeOI638BP6fmg39U2lFoLNNqJaUUNXiksSNjGpb3tdOBTrF9oa4suM9rCoDb4BliHqRl8SRA1mdroUQHqKlGF3eLvKWiESZAZBFbEO7rPnZBZADndbUnHXWwZBeXMbiUJeciB5DYxoMtIQOkD5s4czA7VS1s1M1GF2eMrqAPVBoKURKsMj5MWKbQMmeuaMb5jBwZDZD'; // Set in wrangler.toml or dashboard
-
 export default {
   async fetch(request, env, ctx) {
-    if (request.method === 'GET') {
-      return handleWebhookVerification(request);
-    } else if (request.method === 'POST') {
-      return handleWebhookEvent(request);
-    } else {
-      return new Response('Method not allowed', { status: 405 });
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+    
+    // Handle webhook verification (GET request to /webhooks)
+    if (request.method === 'GET' && pathname === '/webhooks') {
+      return handleWebhookVerification(request, env);
+    } 
+    // Handle incoming messages (POST request to /webhooks)
+    else if (request.method === 'POST' && pathname === '/webhooks') {
+      return handleWebhookEvent(request, env, ctx);
+    } 
+    // Handle root path
+    else if (request.method === 'GET' && pathname === '/') {
+      return new Response('🤖 Facebook SMS Bot is running!\n\nWebhook endpoint: /webhooks', {
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
+    else {
+      return new Response('Not Found', { status: 404 });
     }
   },
 };
 
 // Handle webhook verification
-async function handleWebhookVerification(request) {
+async function handleWebhookVerification(request, env) {
   const url = new URL(request.url);
   const mode = url.searchParams.get('hub.mode');
   const token = url.searchParams.get('hub.verify_token');
   const challenge = url.searchParams.get('hub.challenge');
 
+  // Use environment variables for security
+  const VERIFY_TOKEN = 'mytoken';
+
+  console.log('Webhook verification attempt:', { mode, token, challenge });
+
   if (mode && token) {
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-      console.log('WEBHOOK_VERIFIED');
-      return new Response(challenge, { status: 200 });
+      console.log('✅ WEBHOOK_VERIFIED');
+      return new Response(challenge, { 
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' }
+      });
     } else {
+      console.log('❌ Verification failed - token mismatch');
       return new Response('Verification failed', { status: 403 });
     }
   }
   
-  return new Response('Hello from SMS Bot Worker!', { status: 200 });
+  return new Response('Missing verification parameters', { status: 400 });
 }
 
 // Handle incoming webhook events
-async function handleWebhookEvent(request) {
+async function handleWebhookEvent(request, env, ctx) {
   try {
     const body = await request.json();
+    console.log('Received webhook event:', JSON.stringify(body));
     
     if (body.object === 'page') {
       // Process each entry
@@ -47,9 +66,11 @@ async function handleWebhookEvent(request) {
         const senderId = webhookEvent.sender.id;
         const messageText = webhookEvent.message?.text;
 
+        console.log('Processing message:', { senderId, messageText });
+
         if (messageText) {
           // Process message in background
-          ctx.waitUntil(handleMessage(senderId, messageText.toLowerCase()));
+          ctx.waitUntil(handleMessage(senderId, messageText.toLowerCase(), env));
         }
       }
       return new Response('EVENT_RECEIVED', { status: 200 });
@@ -63,23 +84,23 @@ async function handleWebhookEvent(request) {
 }
 
 // Handle different message types
-async function handleMessage(senderId, message) {
+async function handleMessage(senderId, message, env) {
   try {
     if (message.startsWith('help')) {
-      await sendHelpMessage(senderId);
+      await sendHelpMessage(senderId, env);
     } else if (message.startsWith('sms')) {
-      await handleSMSCommand(senderId, message);
+      await handleSMSCommand(senderId, message, env);
     } else {
-      await sendDefaultMessage(senderId);
+      await sendDefaultMessage(senderId, env);
     }
   } catch (error) {
     console.error('Error handling message:', error);
-    await sendMessage(senderId, 'Sorry, something went wrong. Please try again.');
+    await sendMessage(senderId, 'Sorry, something went wrong. Please try again.', env);
   }
 }
 
 // Handle SMS command
-async function handleSMSCommand(senderId, message) {
+async function handleSMSCommand(senderId, message, env) {
   const parts = message.split(' ');
   
   if (parts.length < 4) {
@@ -88,8 +109,8 @@ async function handleSMSCommand(senderId, message) {
       '📱 Correct format:\n' +
       'sms [phone] [sender] [message]\n\n' +
       'Example:\n' +
-      'sms 09555295917 mark Hello World'
-    );
+      'sms 090000000 mark Hello World'
+    , env);
     return;
   }
 
@@ -100,19 +121,22 @@ async function handleSMSCommand(senderId, message) {
   // Validate phone number (basic validation)
   if (!phone.match(/^09\d{9}$/)) {
     await sendMessage(senderId, 
-      '❌ Invalid phone number format. Please use format: 09555295917'
-    );
+      '❌ Invalid phone number format. Please use format: 090000000'
+    , env);
     return;
   }
 
   try {
-    await sendMessage(senderId, '📤 Sending SMS...');
+    await sendMessage(senderId, '📤 Sending SMS...', env);
 
     // Build SMS API URL with parameters
     const smsUrl = `${SMS_API_URL}?phone=${encodeURIComponent(phone)}&sender=${encodeURIComponent(sender)}&text=${encodeURIComponent(text)}`;
     
+    console.log('Calling SMS API:', smsUrl);
     const response = await fetch(smsUrl);
     const data = await response.json();
+
+    console.log('SMS API response:', data);
 
     if (data.success) {
       await sendMessage(senderId, 
@@ -120,18 +144,18 @@ async function handleSMSCommand(senderId, message) {
         `📞 To: ${phone}\n` +
         `👤 From: ${sender}\n` +
         `💬 Message: ${text}`
-      );
+      , env);
     } else {
-      await sendMessage(senderId, '❌ Failed to send SMS. Please try again.');
+      await sendMessage(senderId, '❌ Failed to send SMS. Please try again.', env);
     }
   } catch (error) {
     console.error('SMS API error:', error);
-    await sendMessage(senderId, '❌ Error sending SMS. Please try again later.');
+    await sendMessage(senderId, '❌ Error sending SMS. Please try again later.', env);
   }
 }
 
 // Send help message
-async function sendHelpMessage(senderId) {
+async function sendHelpMessage(senderId, env) {
   const helpMessage = 
     '🤖 **SMS Bot Help**\n\n' +
     '📱 **Available Commands:**\n' +
@@ -146,22 +170,31 @@ async function sendHelpMessage(senderId) {
     '💡 **Example:**\n' +
     '`sms 09555295917 john Hello there!`';
 
-  await sendMessage(senderId, helpMessage);
+  await sendMessage(senderId, helpMessage, env);
 }
 
 // Send default message
-async function sendDefaultMessage(senderId) {
+async function sendDefaultMessage(senderId, env) {
   const defaultMessage = 
     '🤖 Welcome to SMS Bot!\n\n' +
     'Type `help` to see available commands.\n' +
     'Type `sms [phone] [sender] [message]` to send an SMS.';
 
-  await sendMessage(senderId, defaultMessage);
+  await sendMessage(senderId, defaultMessage, env);
 }
 
 // Send message through Facebook API
-async function sendMessage(senderId, message) {
+async function sendMessage(senderId, message, env) {
   try {
+    const PAGE_ACCESS_TOKEN = 'your_page_access_token_here';
+    
+    const payload = {
+      recipient: { id: senderId },
+      message: { text: message }
+    };
+
+    console.log('Sending message to Facebook API:', payload);
+
     const response = await fetch(
       `https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`,
       {
@@ -169,10 +202,7 @@ async function sendMessage(senderId, message) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          recipient: { id: senderId },
-          message: { text: message }
-        })
+        body: JSON.stringify(payload)
       }
     );
     
@@ -182,7 +212,9 @@ async function sendMessage(senderId, message) {
       throw new Error(`Facebook API responded with status: ${response.status}`);
     }
     
-    return await response.json();
+    const result = await response.json();
+    console.log('Facebook API response:', result);
+    return result;
   } catch (error) {
     console.error('Error sending message:', error);
     throw error;
