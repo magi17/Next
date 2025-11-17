@@ -1,4 +1,3 @@
-
 const SMS_API_URL = 'https://vercelapi-rouge-three.vercel.app/api/sms';
 
 export default {
@@ -70,8 +69,8 @@ async function handleWebhookEvent(request, env, ctx) {
         console.log('Processing message:', { senderId, messageText });
 
         if (messageText) {
-          // Process message in background
-          ctx.waitUntil(handleMessage(senderId, messageText.toLowerCase(), env));
+          // Process message in background - preserve original case for display
+          ctx.waitUntil(handleMessage(senderId, messageText, env));
         }
       }
       return new Response('EVENT_RECEIVED', { status: 200 });
@@ -87,9 +86,11 @@ async function handleWebhookEvent(request, env, ctx) {
 // Handle different message types
 async function handleMessage(senderId, message, env) {
   try {
-    if (message.startsWith('help')) {
+    const lowerMessage = message.toLowerCase();
+    
+    if (lowerMessage.startsWith('help')) {
       await sendHelpMessage(senderId, env);
-    } else if (message.startsWith('sms')) {
+    } else if (lowerMessage.startsWith('sms')) {
       await handleSMSCommand(senderId, message, env);
     } else {
       await sendDefaultMessage(senderId, env);
@@ -110,7 +111,7 @@ async function handleSMSCommand(senderId, message, env) {
       '📱 Correct format:\n' +
       'sms [phone] [sender] [message]\n\n' +
       'Example:\n' +
-      'sms 090000000 mark Hello World'
+      'sms 09123456789 MyCompany Hello World!'
     , env);
     return;
   }
@@ -122,7 +123,7 @@ async function handleSMSCommand(senderId, message, env) {
   // Validate phone number (basic validation)
   if (!phone.match(/^09\d{9}$/)) {
     await sendMessage(senderId, 
-      '❌ Invalid phone number format. Please use format: 090000000'
+      '❌ Invalid phone number format. Please use format: 09123456789 (11 digits starting with 09)'
     , env);
     return;
   }
@@ -158,18 +159,18 @@ async function handleSMSCommand(senderId, message, env) {
 // Send help message
 async function sendHelpMessage(senderId, env) {
   const helpMessage = 
-    '🤖 **SMS Bot Help**\n\n' +
-    '📱 **Available Commands:**\n' +
-    '• `help` - Show this help message\n' +
-    '• `sms [phone] [sender] [message]` - Send SMS\n\n' +
-    '📝 **SMS Format:**\n' +
-    '`sms 09123456789 mark Hello World`\n\n' +
-    '📋 **Parameters:**\n' +
-    '• `phone` - 11-digit number (09XXXXXXXXX)\n' +
-    '• `sender` - Sender name\n' +
-    '• `message` - Your text message\n\n' +
-    '💡 **Example:**\n' +
-    'sms 09123456789 john Hello there!';
+    '🤖 SMS Bot Help\n\n' +
+    '📱 Available Commands:\n' +
+    '• help - Show this help message\n' +
+    '• sms [phone] [sender] [message] - Send SMS\n\n' +
+    '📝 SMS Format:\n' +
+    'sms 09123456789 SenderName Your message here\n\n' +
+    '📋 Parameters:\n' +
+    '• phone - 11-digit number (09XXXXXXXXX)\n' +
+    '• sender - Sender name (uppercase/lowercase allowed)\n' +
+    '• message - Your text message (uppercase/lowercase preserved)\n\n' +
+    '💡 Examples:\n' +
+    '• sms 09123456789 User Hello World!\n';
 
   await sendMessage(senderId, helpMessage, env);
 }
@@ -178,8 +179,9 @@ async function sendHelpMessage(senderId, env) {
 async function sendDefaultMessage(senderId, env) {
   const defaultMessage = 
     '🤖 Welcome to SMS Bot!\n\n' +
-    'Type `help` to see available commands.\n' +
-    'Type `sms [phone] [sender] [message]` to send an SMS.';
+    'Type "help" to see available commands.\n' +
+    'Type "sms [phone] [sender] [message]" to send an SMS.\n\n' +
+    '💡 Note: Uppercase and lowercase letters are supported in all commands and messages.';
 
   await sendMessage(senderId, defaultMessage, env);
 }
