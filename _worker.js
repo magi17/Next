@@ -169,7 +169,7 @@ async function sendHelpMessage(senderId, env) {
     '• `sender` - Sender name\n' +
     '• `message` - Your text message\n\n' +
     '💡 **Example:**\n' +
-    '`sms 09123456789 john Hello there!`';
+    'sms 09123456789 john Hello there!';
 
   await sendMessage(senderId, helpMessage, env);
 }
